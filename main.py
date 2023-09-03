@@ -1,5 +1,6 @@
 # Import necessary modules
 import requests, sqlite3, os, inquirer, base64
+from os import remove, path
 
 # Vars
 user = ''
@@ -21,9 +22,30 @@ def main():
         SetAPIKey()
     co = DBConnect()
     GetGamesList(co)
-
+    CleanNotInstalledGames(co)
 
 ####### FUNCTIONS
+
+#Get list of installed games
+def CleanNotInstalledGames(co):
+    c = co.execute('SELECT slug FROM games WHERE installed = "1"')
+    games = c.fetchall()
+    listgames = []
+    for entry in games:
+        title = entry[0] + '.jpg'
+        listgames.append(title.lower())
+    DeleteImages(listgames)
+
+
+#Delete covers/banners for not installed games
+def DeleteImages(listgames):
+    bannpath = '/home/' + user + '/.var/app/net.lutris.Lutris/cache/lutris/banners/'
+    covpath = '/home/' + user + '/.var/app/net.lutris.Lutris/cache/lutris/coverart/'
+    for path in [bannpath, covpath]:
+        for filename in os.listdir(path):
+            if filename.lower() not in listgames and os.path.isfile(os.path.join(path, filename)):
+                if filename.lower().endswith('.jpg'):
+                    os.remove(os.path.join(path, filename))
 
 
 def GetUser():
@@ -115,7 +137,7 @@ def DownloadCover(name):
 
 # Get all games and for each game, check if it already has a cover
 def GetGamesList(co):
-    c = co.execute('SELECT slug FROM games')
+    c = co.execute('SELECT slug FROM games WHERE installed = "1"')
     games = c.fetchall()
     for entry in games:
         title = entry[0]
